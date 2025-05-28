@@ -8,7 +8,8 @@ public class GameManager {
     private int currentPlayer = 0;
     private String topCard = "R0";
     private boolean isClockwise = true;
-    private String currentColor = "R";  // wild
+    private String currentColor = "R";
+    private boolean gameEnded = false;
 
     public void startGame(List<UnoGameServer.ClientHandler> clients) {
         this.clients = clients;
@@ -26,84 +27,184 @@ public class GameManager {
 
     public void processCommand(String command, UnoGameServer.ClientHandler client) {
         int playerId = client.getPlayerId();
+
+        if (gameEnded) {
+            if (command.equalsIgnoreCase("restart")) {
+                if (playerId != 0) {
+                    client.sendMessage("Only Player 1 can restart the game.");
+                    return;
+                }
+                broadcast("Player 1 restarted the game.");
+                restartGame();
+                return;
+            } else if (command.equalsIgnoreCase("exit")) {
+                client.sendMessage("Goodbye!");
+                try {
+                    client.close();
+                } catch (Exception e) {
+                    System.out.println("Error closing client " + playerId);
+                }
+                return;
+            } else {
+                client.sendMessage("Game over. Type 'restart' to play again or 'exit' to leave.");
+                return;
+            }
+        }
+
         if (playerId != currentPlayer) {
             client.sendMessage("Not your turn.");
             return;
         }
 
         if (command.startsWith("play ")) {
-            // "play <card>" or "play W <color>" 
-            String[] parts = command.split(" ");
-            String card = parts[1].trim();
-
-            if (!playerHands.get(playerId).contains(card)) {
-                client.sendMessage("You don't have that card.");
+            String[] parts = command.trim().split(" ");
+            if (parts.length < 2) {
+                client.sendMessage("Specify cards to play.");
                 return;
             }
 
-            if (card.equals("W")) {
-                // Wild card : select color
+            // Wild (W)
+            if (parts[1].equalsIgnoreCase("W")) {
                 if (parts.length < 3) {
-                    client.sendMessage("Specify color after Wild card (R, G, B, Y). Example: play W R");
+                    client.sendMessage("Specify color after Wild card (R, G, B, Y).");
                     return;
                 }
                 String chosenColor = parts[2].toUpperCase();
                 if (!Arrays.asList("R", "G", "B", "Y").contains(chosenColor)) {
-                    client.sendMessage("Invalid color chosen. Choose R, G, B or Y.");
+                    client.sendMessage("Invalid color chosen.");
                     return;
                 }
-                // Wild
-                playerHands.get(playerId).remove(card);
-                topCard = "W";  // Wild card
+                if (!playerHands.get(playerId).contains("W")) {
+                    client.sendMessage("You don't have that card.");
+                    return;
+                }
+
+                playerHands.get(playerId).remove("W");
+                topCard = "W";
                 currentColor = chosenColor;
                 broadcast("Player " + (playerId + 1) + " played Wild and changed color to " + chosenColor);
                 sendHand(client);
+
                 if (playerHands.get(playerId).isEmpty()) {
-                    broadcast("Player " + (playerId + 1) + " wins!");
+                    endGame(playerId);
                     return;
                 }
+
                 nextTurn();
                 return;
             }
 
-            // is card playable (Color/Number/Skip/Reverse)
-            if (isPlayable(card)) {
-                playerHands.get(playerId).remove(card);
-                topCard = card;
-                currentColor = String.valueOf(card.charAt(0));
-                broadcast("Player " + (playerId + 1) + " played " + card + ". Top card: " + topCard);
-                sendHand(client);
-
-                // card empty
-                if (playerHands.get(playerId).isEmpty()) {
-                    broadcast("Player " + (playerId + 1) + " wins!");
+            // Wild +4 (W4+)
+            if (parts[1].equalsIgnoreCase("W4+")) {
+                if (parts.length < 3) {
+                    client.sendMessage("Specify color after Wild +4 (R, G, B, Y).");
+                    return;
+                }
+                String chosenColor = parts[2].toUpperCase();
+                if (!Arrays.asList("R", "G", "B", "Y").contains(chosenColor)) {
+                    client.sendMessage("Invalid color chosen.");
+                    return;
+                }
+                if (!playerHands.get(playerId).contains("W4+")) {
+                    client.sendMessage("You don't have that card.");
                     return;
                 }
 
-                // special card
-                char cardType = card.charAt(1);
-                switch (cardType) {
-                    case 'S':  // Skip
+                playerHands.get(playerId).remove("W4+");
+                topCard = "W4+";
+                currentColor = chosenColor;
+                broadcast("Player " + (playerId + 1) + " played Wild +4 and changed color to " + chosenColor);
+
+                int nextPlayer = isClockwise ? (currentPlayer + 1) % clients.size()
+                        : (currentPlayer - 1 + clients.size()) % clients.size();
+                for (int i = 0; i < 4; i++) {
+                    playerHands.get(nextPlayer).add(randomCard());
+                }
+                clients.get(nextPlayer).sendMessage("You drew 4 cards due to Wild +4.");
+                sendHand(client);
+                sendHand(clients.get(nextPlayer));
+
+                if (playerHands.get(playerId).isEmpty()) {
+                    endGame(playerId);
+                    return;
+                }
+
+                skipTurn();
+                return;
+            }
+
+            // ปกติ
+            List<String> cardsToPlay = new ArrayList<>();
+            for (int i = 1; i < parts.length; i++) {
+                cardsToPlay.add(parts[i].toUpperCase());
+            }
+
+            if (!playerHands.get(playerId).containsAll(cardsToPlay)) {
+                client.sendMessage("You don't have all the specified cards.");
+                return;
+            }
+
+            String firstCard = cardsToPlay.get(0);
+            String cardValue = firstCard.substring(1);
+
+            for (String card : cardsToPlay) {
+                if (card.length() < 2 || !card.substring(1).equals(cardValue)) {
+                    client.sendMessage("All cards must have the same number or symbol.");
+                    return;
+                }
+            }
+
+            if (!isPlayable(firstCard)) {
+                client.sendMessage("First card is not playable.");
+                return;
+            }
+
+            playerHands.get(playerId).removeAll(cardsToPlay);
+            topCard = firstCard;
+            currentColor = String.valueOf(firstCard.charAt(0));
+            broadcast("Player " + (playerId + 1) + " played: " + String.join(" ", cardsToPlay) + ". Top card: "
+                    + topCard);
+            sendHand(client);
+
+            if (playerHands.get(playerId).isEmpty()) {
+                endGame(playerId);
+                return;
+            }
+
+            // การ์ดพิเศษ
+            if (cardsToPlay.size() == 1) {
+                switch (cardValue) {
+                    case "S":
                         broadcast("Player " + ((currentPlayer + 1) % clients.size() + 1) + " is skipped!");
                         skipTurn();
-                        break;
-                    case 'R':  // Reverse
+                        return;
+                    case "R":
                         isClockwise = !isClockwise;
                         broadcast("Play direction reversed!");
                         if (clients.size() == 2) {
-                            // 2 player as a skip
                             skipTurn();
                         } else {
                             nextTurn();
                         }
-                        break;
+                        return;
+                    case "2+":
+                        int drawPlayer = isClockwise ? (currentPlayer + 1) % clients.size()
+                                : (currentPlayer - 1 + clients.size()) % clients.size();
+                        for (int i = 0; i < 2; i++) {
+                            playerHands.get(drawPlayer).add(randomCard());
+                        }
+                        clients.get(drawPlayer).sendMessage("You drew 2 cards due to +2.");
+                        sendHand(clients.get(drawPlayer));
+                        skipTurn();
+                        return;
                     default:
                         nextTurn();
-                        break;
+                        return;
                 }
             } else {
-                client.sendMessage("Invalid card or color/number mismatch.");
+                nextTurn();
             }
+
         } else if (command.equals("draw")) {
             String newCard = randomCard();
             playerHands.get(playerId).add(newCard);
@@ -126,21 +227,14 @@ public class GameManager {
     }
 
     private void nextTurn() {
-        if (isClockwise) {
-            currentPlayer = (currentPlayer + 1) % clients.size();
-        } else {
-            currentPlayer = (currentPlayer - 1 + clients.size()) % clients.size();
-        }
+        currentPlayer = isClockwise ? (currentPlayer + 1) % clients.size()
+                : (currentPlayer - 1 + clients.size()) % clients.size();
         clients.get(currentPlayer).sendMessage("Your turn!");
     }
 
     private void skipTurn() {
-        // skip
-        if (isClockwise) {
-            currentPlayer = (currentPlayer + 2) % clients.size();
-        } else {
-            currentPlayer = (currentPlayer - 2 + clients.size()) % clients.size();
-        }
+        currentPlayer = isClockwise ? (currentPlayer + 2) % clients.size()
+                : (currentPlayer - 2 + clients.size()) % clients.size();
         clients.get(currentPlayer).sendMessage("Your turn!");
     }
 
@@ -159,43 +253,60 @@ public class GameManager {
     }
 
     private String randomCard() {
-        String[] colors = {"R", "G", "B", "Y"};
-        String[] specials = {"S", "R"};  // Skip, Reverse
+        String[] colors = { "R", "G", "B", "Y" };
         Random rnd = new Random();
-        String color = colors[rnd.nextInt(colors.length)];
-
-        int type = rnd.nextInt(12);
+        int type = rnd.nextInt(15);
         if (type < 10) {
-            // 0-9
-            return color + type;
+            return colors[rnd.nextInt(colors.length)] + type;
         } else if (type == 10) {
-            // Skip
-            return color + "S";
+            return colors[rnd.nextInt(colors.length)] + "S";
+        } else if (type == 11) {
+            return colors[rnd.nextInt(colors.length)] + "R";
+        } else if (type == 12) {
+            return colors[rnd.nextInt(colors.length)] + "2+";
+        } else if (type == 13) {
+            return "W";
         } else {
-            // Reverse
-            return color + "R";
+            return "W4+";
         }
-        // Wild not a randomCard because it's a special card
     }
 
     private boolean isPlayable(String card) {
-        // Wild can play all the time
-        if (card.equals("W")) return true;
+        if (card.equals("W") || card.equals("W4+"))
+            return true;
+        String cardColor = card.substring(0, 1);
+        String cardValue = card.substring(1);
+        String topCardValue = topCard.equals("W") || topCard.equals("W4+") ? "" : topCard.substring(1);
+        String topCardColor = currentColor;
+        return cardColor.equals(topCardColor) || cardValue.equals(topCardValue);
+    }
 
-        char cardColor = card.charAt(0);
-        char cardValue = card.charAt(1);
+    private void endGame(int winnerId) {
+        gameEnded = true;
+        broadcast("Player " + (winnerId + 1) + " wins!");
+        for (UnoGameServer.ClientHandler client : clients) {
+            if (client.getPlayerId() != winnerId) {
+                client.sendMessage("You lose.");
+            }
+            client.sendMessage("Game over. Type 'restart' to play again or 'exit' to leave.");
+        }
+    }
 
-        // Card on the table
-        char topColor = currentColor.charAt(0);
-        char topValue = (topCard.equals("W")) ? ' ' : topCard.charAt(1);
+    private void restartGame() {
+        this.currentPlayer = 0;
+        this.topCard = randomCard();
+        this.currentColor = String.valueOf(topCard.charAt(0));
+        this.isClockwise = true;
+        this.gameEnded = false;
+        this.playerHands.clear();
 
-        // Can play if
-        // 1) The color matches currentColor.
-        // 2) Number/special character matches topCard (for example, R7 can be played if the topCard is G7)
-        // 3) Special cards Skip or Reverse can be used if they are the same (color or number matching condition 1 or 2)
-        if (cardColor == topColor) return true;
-        if (cardValue == topValue) return true;
+        for (int i = 0; i < clients.size(); i++) {
+            List<String> hand = dealHand();
+            playerHands.add(hand);
+            clients.get(i).sendMessage("Your cards: " + String.join(" ", hand));
+        }
 
-        return false;
+        broadcast("Game restarted! Top card: " + topCard);
+        clients.get(currentPlayer).sendMessage("Your turn!");
     }
 }

@@ -43,7 +43,8 @@ public class UnoGameServer {
                 out.println("Welcome Player " + (playerId + 1));
                 while (true) {
                     String command = in.readLine();
-                    if (command == null) break;
+                    if (command == null)
+                        break;
                     gameManager.processCommand(command, this);
                 }
             } catch (IOException e) {
@@ -58,5 +59,17 @@ public class UnoGameServer {
         public int getPlayerId() {
             return playerId;
         }
+
+        // 🔥 เพิ่มเมธอดนี้
+        public void close() {
+            try {
+                socket.close();
+                in.close();
+                out.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
+    
 }
