@@ -44,7 +44,7 @@ public class UnoFXClient extends Application {
 
         // topCard
         topCardLabel.setStyle(
-            "-fx-border-color: black; -fx-padding: 10; -fx-background-color: lightyellow; -fx-font-weight: bold;");
+                "-fx-border-color: black; -fx-padding: 10; -fx-background-color: lightyellow; -fx-font-weight: bold;");
         VBox topBox = new VBox(10, new Label("Top Card:"), topCardLabel);
         topBox.setAlignment(Pos.CENTER);
         topBox.setPadding(new Insets(10));
@@ -132,8 +132,13 @@ public class UnoFXClient extends Application {
         }
 
         // แสดงปุ่มเมื่อเกมจบ
-        if (message.toLowerCase().contains("game over") || message.toLowerCase().contains("wins the game")) {
+        String msgLower = message.toLowerCase();
+        if (msgLower.contains("game over") || msgLower.contains("wins!") || msgLower.contains("game ended")) {
             showGameEndOptions();
+        }
+
+        if (msgLower.contains("game restarted")) {
+            hideGameEndOptions();
         }
 
     }
@@ -144,6 +149,14 @@ public class UnoFXClient extends Application {
         }
         restartButton.setDisable(false);
         exitButton.setDisable(false);
+        drawButton.setDisable(true);
+        readyButton.setDisable(true);
+    }
+
+    private void hideGameEndOptions() {
+        controls.getChildren().removeAll(restartButton, exitButton);
+        drawButton.setDisable(false);
+        readyButton.setDisable(false);
     }
 
     private void updateTopCardDisplay() {

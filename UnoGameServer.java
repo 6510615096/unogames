@@ -23,12 +23,19 @@ public class UnoGameServer {
             new Thread(client).start();
             System.out.println("Player " + clients.size() + " connected.");
         }
+
+        // gameManager.startGame(clients);
     }
 
     public static void broadcastToAll(String message) {
         for (ClientThread client : clients) {
             client.sendMessage(message);
         }
+    }
+
+    public static void notifyGameOver(int winnerPlayerId) {
+        broadcastToAll("Game over! Player " + (winnerPlayerId + 1) + " wins the game!");
+        // คุณสามารถเติม logic reset/restart เกมได้ที่นี่หากต้องการ
     }
 
     static class ClientThread implements Runnable {
@@ -57,7 +64,7 @@ public class UnoGameServer {
                             if (!readyPlayers.contains(playerId)) {
                                 readyPlayers.add(playerId);
                                 broadcastToAll("Player " + (playerId + 1) + " is ready. (" +
-                                    readyPlayers.size() + "/" + clients.size() + ")");
+                                        readyPlayers.size() + "/" + clients.size() + ")");
                             }
                             if (readyPlayers.size() == clients.size()) {
                                 gameStarted = true;
@@ -114,5 +121,5 @@ public class UnoGameServer {
         }
 
     }
-    
+
 }
