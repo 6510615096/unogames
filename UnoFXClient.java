@@ -90,7 +90,7 @@ public class UnoFXClient extends Application {
 
     private void connectToServer() {
         new Thread(() -> {
-            try (Socket socket = new Socket("localhost", 12345)) {
+            try (Socket socket = new Socket("localhost", 9611)) {
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 out = new PrintWriter(socket.getOutputStream(), true);
 
@@ -183,14 +183,6 @@ public class UnoFXClient extends Application {
         if (out != null) {
             out.println(cmd);
         }
-    }
-
-    private void showAlert(String title, String msg) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(msg);
-        alert.showAndWait();
     }
 
     public static void main(String[] args) {

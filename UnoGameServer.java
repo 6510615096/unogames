@@ -5,11 +5,11 @@ import java.net.*;
 import java.util.*;
 
 public class UnoGameServer {
-    private static final int PORT = 12345;
+    private static final int PORT = 9611;
     private static final int MAX_PLAYERS = 4;
     private static Set<Integer> readyPlayers = new HashSet<>();
     private static boolean gameStarted = false;
-    private static List<ClientHandler> clients = Collections.synchronizedList(new ArrayList<>());
+    private static List<ClientThread> clients = Collections.synchronizedList(new ArrayList<>());
     private static GameManager gameManager = new GameManager();
 
     public static void main(String[] args) throws IOException {
@@ -18,33 +18,26 @@ public class UnoGameServer {
 
         while (clients.size() < MAX_PLAYERS) {
             Socket socket = serverSocket.accept();
-            ClientHandler client = new ClientHandler(socket, clients.size());
+            ClientThread client = new ClientThread(socket, clients.size());
             clients.add(client);
             new Thread(client).start();
             System.out.println("Player " + clients.size() + " connected.");
         }
-
-        //gameManager.startGame(clients);
     }
 
     public static void broadcastToAll(String message) {
-        for (ClientHandler client : clients) {
+        for (ClientThread client : clients) {
             client.sendMessage(message);
         }
     }
 
-    public static void notifyGameOver(int winnerPlayerId) {
-        broadcastToAll("Game over! Player " + (winnerPlayerId + 1) + " wins the game!");
-        // คุณสามารถเติม logic reset/restart เกมได้ที่นี่หากต้องการ
-    }
-
-    static class ClientHandler implements Runnable {
+    static class ClientThread implements Runnable {
         private Socket socket;
         private BufferedReader in;
         private PrintWriter out;
         private int playerId;
 
-        public ClientHandler(Socket socket, int playerId) throws IOException {
+        public ClientThread(Socket socket, int playerId) throws IOException {
             this.socket = socket;
             this.playerId = playerId;
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));

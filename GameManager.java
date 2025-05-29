@@ -3,7 +3,7 @@ package unogames;
 import java.util.*;
 
 public class GameManager {
-    private List<UnoGameServer.ClientHandler> clients;
+    private List<UnoGameServer.ClientThread> clients;
     private List<List<String>> playerHands;
     private int currentPlayer = 0;
     private String topCard = "R0";
@@ -24,7 +24,7 @@ public class GameManager {
         return color + number;
     }
 
-    public void startGame(List<UnoGameServer.ClientHandler> clients) {
+    public void startGame(List<UnoGameServer.ClientThread> clients) {
         this.clients = clients;
         this.gameStarted = true;
         this.gameEnded = false;
@@ -40,7 +40,7 @@ public class GameManager {
         clients.get(currentPlayer).sendMessage("Your turn!");
     }
 
-    public void processCommand(String command, UnoGameServer.ClientHandler client) {
+    public void processCommand(String command, UnoGameServer.ClientThread client) {
         int playerId = client.getPlayerId();
 
         if (gameEnded) {
@@ -234,7 +234,7 @@ public class GameManager {
         }
     }
 
-    private void sendHand(UnoGameServer.ClientHandler client) {
+    private void sendHand(UnoGameServer.ClientThread client) {
         int pid = client.getPlayerId();
         List<String> hand = playerHands.get(pid);
         client.sendMessage("Your cards: " + String.join(" ", hand));
@@ -253,7 +253,7 @@ public class GameManager {
     }
 
     private void broadcast(String message) {
-        for (UnoGameServer.ClientHandler client : clients) {
+        for (UnoGameServer.ClientThread client : clients) {
             client.sendMessage(message);
         }
     }
@@ -299,7 +299,7 @@ public class GameManager {
         gameEnded = true;
         broadcast("Player " + (winnerId + 1) + " wins!");
         broadcast("Game ended. Type 'restart' to play again or 'exit' to leave.");
-        for (UnoGameServer.ClientHandler client : clients) {
+        for (UnoGameServer.ClientThread client : clients) {
             if (client.getPlayerId() != winnerId) {
                 client.sendMessage("You lose.");
             }
