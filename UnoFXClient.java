@@ -131,22 +131,11 @@ public class UnoFXClient extends Application {
             updateTopCardDisplay();
         }
 
-<<<<<<< HEAD
         // แสดงปุ่มเมื่อเกมจบ
         if (message.toLowerCase().contains("game over") || message.toLowerCase().contains("wins the game")) {
             showGameEndOptions();
         }
 
-=======
-        String msgLower = message.toLowerCase();
-        if (msgLower.contains("game over") || msgLower.contains("wins!") || msgLower.contains("game ended")) {
-            showGameEndOptions();
-        }
-
-        if (msgLower.contains("game restarted")) {
-            hideGameEndOptions();
-        }
->>>>>>> b459ff1 (fix restart and exit button and add gitignore)
     }
 
     private void showGameEndOptions() {
@@ -155,18 +144,6 @@ public class UnoFXClient extends Application {
         }
         restartButton.setDisable(false);
         exitButton.setDisable(false);
-<<<<<<< HEAD
-=======
-
-        drawButton.setDisable(true);
-        readyButton.setDisable(true);
-    }
-
-    private void hideGameEndOptions() {
-        controls.getChildren().removeAll(restartButton, exitButton);
-        drawButton.setDisable(false);
-        readyButton.setDisable(false);
->>>>>>> b459ff1 (fix restart and exit button and add gitignore)
     }
 
     private void updateTopCardDisplay() {
