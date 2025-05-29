@@ -9,17 +9,31 @@ public class GameManager {
     private String topCard = "R0";
     private boolean isClockwise = true;
     private String currentColor = "R";
+    private boolean gameStarted = false;
     private boolean gameEnded = false;
+
+    public boolean isGameStarted() {
+        return gameStarted;
+    }
+
+    private String randomNumberCard() {
+        String[] colors = { "R", "G", "B", "Y" };
+        Random rnd = new Random();
+        int number = rnd.nextInt(10); // 0-9
+        String color = colors[rnd.nextInt(colors.length)];
+        return color + number;
+    }
 
     public void startGame(List<UnoGameServer.ClientHandler> clients) {
         this.clients = clients;
+        this.gameStarted = true;
         this.playerHands = new ArrayList<>();
         for (int i = 0; i < clients.size(); i++) {
             List<String> hand = dealHand();
             playerHands.add(hand);
             clients.get(i).sendMessage("Your cards: " + String.join(" ", hand));
         }
-        topCard = randomCard();
+        topCard = randomNumberCard(); // give a starter can be only numbers
         currentColor = String.valueOf(topCard.charAt(0));
         broadcast("Game started! Top card: " + topCard);
         clients.get(currentPlayer).sendMessage("Your turn!");
@@ -288,13 +302,13 @@ public class GameManager {
             if (client.getPlayerId() != winnerId) {
                 client.sendMessage("You lose.");
             }
-            client.sendMessage("Game over. Type 'restart' to play again or 'exit' to leave.");
+            client.sendMessage("Game ended. Type 'restart' to play again or 'exit' to leave.");
         }
     }
 
     private void restartGame() {
         this.currentPlayer = 0;
-        this.topCard = randomCard();
+        this.topCard = randomNumberCard();
         this.currentColor = String.valueOf(topCard.charAt(0));
         this.isClockwise = true;
         this.gameEnded = false;
