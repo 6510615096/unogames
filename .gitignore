@@ -1,0 +1,51 @@
+# ไฟล์ class ที่คอมไพล์แล้ว
+*.class
+
+# โฟลเดอร์ build ของ Maven/Gradle
+/target/
+/build/
+
+# ไฟล์และโฟลเดอร์ของ IDE ยอดนิยม
+# IntelliJ IDEA
+/.idea/
+/*.iml
+/out/
+
+# Eclipse
+/.classpath
+/.project
+/.settings/
+
+# NetBeans
+/nbproject/private/
+/build/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# ไฟล์ log
+*.log
+
+# ไฟล์ชั่วคราวของระบบปฏิบัติการ
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# ไฟล์ของระบบ Mac OS
+.DS_Store
+
+# ไฟล์ของระบบ Windows
+Thumbs.db
+ehthumbs.db
+
+# ไฟล์ JAR และ WAR ถ้าไม่ต้องการเก็บใน Git
+*.jar
+*.war
+
+# ไฟล์ที่มาจาก Maven Wrapper
+/.mvn/wrapper/maven-wrapper.jar
+
+/javafx-sdk-21.0.7/

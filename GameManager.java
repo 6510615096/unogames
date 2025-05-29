@@ -27,6 +27,10 @@ public class GameManager {
     public void startGame(List<UnoGameServer.ClientHandler> clients) {
         this.clients = clients;
         this.gameStarted = true;
+<<<<<<< HEAD
+=======
+        this.gameEnded = false;
+>>>>>>> b459ff1 (fix restart and exit button and add gitignore)
         this.playerHands = new ArrayList<>();
         for (int i = 0; i < clients.size(); i++) {
             List<String> hand = dealHand();
@@ -60,7 +64,10 @@ public class GameManager {
                 }
                 return;
             } else {
+<<<<<<< HEAD
                 client.sendMessage("Game over. Type 'restart' to play again or 'exit' to leave.");
+=======
+>>>>>>> b459ff1 (fix restart and exit button and add gitignore)
                 return;
             }
         }
@@ -298,11 +305,18 @@ public class GameManager {
     private void endGame(int winnerId) {
         gameEnded = true;
         broadcast("Player " + (winnerId + 1) + " wins!");
+<<<<<<< HEAD
+=======
+        broadcast("Game ended. Type 'restart' to play again or 'exit' to leave.");
+>>>>>>> b459ff1 (fix restart and exit button and add gitignore)
         for (UnoGameServer.ClientHandler client : clients) {
             if (client.getPlayerId() != winnerId) {
                 client.sendMessage("You lose.");
             }
+<<<<<<< HEAD
             client.sendMessage("Game ended. Type 'restart' to play again or 'exit' to leave.");
+=======
+>>>>>>> b459ff1 (fix restart and exit button and add gitignore)
         }
     }
 
